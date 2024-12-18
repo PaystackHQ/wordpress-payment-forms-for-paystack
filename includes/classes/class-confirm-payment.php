@@ -38,7 +38,7 @@ class Confirm_Payment {
 	protected $transaction = false;
 
 	/**
-	 * Holds the current payment meta retrieved from the DB.
+	 * Holds the verified payment meta from the DB
 	 *
 	 * @var object
 	 */
@@ -66,12 +66,27 @@ class Confirm_Payment {
 	protected $oamount = 0;
 
 	/**
+	 * The quantity bought.
+	 *
+	 * @var integer
+	 */
+	protected $quantity = 1;
+
+	/**
 	 * The transaction column to update.
 	 * Defaults to 'txn_code' and 'txn_code_2' when a payment retry is triggered.
 	 *
 	 * @var integer
 	 */
 	protected $txn_column = 'txn_code';
+
+	/**
+	 * The transaction reference
+	 * Defaults to the 'txn_code' and 'txn_code_2' when a payment retry is triggered.
+	 *
+	 * @var integer
+	 */
+	protected $reference = '';
 
 	/**
 	 * Constructor
@@ -89,12 +104,12 @@ class Confirm_Payment {
 	protected function setup_data( $payment ) {
 		$this->payment_meta = $payment;
 		$this->meta         = $this->helpers->parse_meta_values( get_post( $this->payment_meta->post_id ) );
-		$this->amount       = $this->payment_meta->amount;
-		$this->oamount      = $this->meta['amount'];
 		$this->form_id      = $this->payment_meta->post_id;
-
-		if ( 'customer' === $this->meta['txncharge'] ) {
-			$this->oamount = $this->helpers->process_transaction_fees( $this->oamount );
+		$this->amount       = $this->payment_meta->amount;
+		$this->oamount      = $this->amount;
+		$this->reference    = $this->payment_meta->txn_code;
+		if ( isset( $this->payment_meta->txn_code_2 ) && ! empty( $this->payment_meta->txn_code_2 ) ) {
+			$this->reference = $this->payment_meta->txn_code_2;
 		}
 	}
 	
@@ -106,7 +121,7 @@ class Confirm_Payment {
 		if ( ! isset( $_POST['nonce'] ) || false === wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'pff-paystack-confirm' ) ) {
 			$response = array(
 				'error' => true,
-				'error_message' => __( 'Nonce verification is required.', 'pff-paystack' ),
+				'error_message' => esc_html__( 'Nonce verification is required.', 'pff-paystack' ),
 			);
 	
 			exit( wp_json_encode( $response ) );	
@@ -117,15 +132,22 @@ class Confirm_Payment {
 		if ( ! isset( $_POST['code'] ) || '' === trim( wp_unslash( $_POST['code'] ) ) ) {
 			$response = array(
 				'error' => true,
-				'error_message' => __( 'Did you make a payment?', 'pff-paystack' ),
+				'error_message' => esc_html__( 'Did you make a payment?', 'pff-paystack' ),
 			);
 	
 			exit( wp_json_encode( $response ) );
 		}
 
 		// If this is a retry payment then set the colum accordingly.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		if ( isset( $_POST['retry'] ) ) {
 			$this->txn_column = 'txn_code_2';
+		}
+
+		// This is a false positive, we are using isset as WPCS suggest in the PCP plugin.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		if ( isset( $_POST['quantity'] ) ) {
+			$this->quantity = sanitize_text_field( wp_unslash( $_POST['quantity'] ) );
 		}
 	
 		$this->helpers = new Helpers();
@@ -147,48 +169,58 @@ class Confirm_Payment {
 				}
 			} else {
 				$response = [
-					'message' => __( 'Failed to connect to Paystack.', 'pff-paystack' ),
+					'message' => esc_html__( 'Failed to connect to Paystack.', 'pff-paystack' ),
 					'result'  => 'failed',
 				];	
 			}
 	
 		} else {
 			$response = [
-				'message' => __( 'Payment Verification Failed', 'pff-paystack' ),
+				'message' => esc_html__( 'Payment Verification Failed', 'pff-paystack' ),
 				'result'  => 'failed',
 			];
 		}
-	
 
 		// Create plan and send reciept.
 		if ( 'success' === $response['result'] ) {
 			
 			// Create a plan that the user will be subscribed to.
-			
-			/*$pstk_logger = new kkd_pff_paystack_plugin_tracker( 'pff-paystack', Kkd_Pff_Paystack_Public::fetchPublicKey() );
-			$pstk_logger->log_transaction_success( $code );*/
-
 			$this->maybe_create_subscription();
 	
-			
 			$sendreceipt = $this->meta['sendreceipt'];
-			if ( 'yes' === $sendreceipt ) {
-				$decoded = json_decode( $this->payment_meta->metadata );
-				$fullname = $decoded[1]->value;
+			$decoded     = json_decode( $this->payment_meta->metadata );
+			$fullname    = $decoded[1]->value;
 
+			if ( 'yes' === $sendreceipt ) {
 				/**
 				 * Allow 3rd Party Plugins to hook into the email sending.
 				 * 
 				 * 10: Email_Receipt::send_receipt();
 				 * 11: Email_Receipt_Owner::send_receipt_owner();
 				 */
+
 				do_action( 'pff_paystack_send_receipt',
 					$this->payment_meta->post_id,
 					$this->payment_meta->currency,
-					$this->payment_meta->amount_paid,
+					$this->payment_meta->amount,
 					$fullname,
 					$this->payment_meta->email,
-					$this->payment_meta->reference,
+					$this->reference,
+					$this->payment_meta->metadata
+				);
+
+				/**
+				 * Allow 3rd Party Plugins to hook into the email sending.
+				 * 11: Email_Receipt_Owner::send_receipt_owner();
+				 */
+
+				do_action( 'pff_paystack_send_receipt_owner',
+					$this->payment_meta->post_id,
+					$this->payment_meta->currency,
+					$this->payment_meta->amount,
+					$fullname,
+					$this->payment_meta->email,
+					$this->reference,
 					$this->payment_meta->metadata
 				);
 			}
@@ -196,11 +228,44 @@ class Confirm_Payment {
 	
 		if ( 'success' === $response['result'] && '' !== $this->meta['redirect'] ) {
 			$response['result'] = 'success2';
-			$response['link']   = $this->meta['redirect'];
+			$response['link']   = $this->add_param_to_url( $this->meta['redirect'], $this->reference );
 		}
 	
 		echo wp_json_encode( $response );
 		die();
+	}
+
+	/**
+	 * Adds parameters to a URL.
+	 *
+	 * @param string $url The original URL.
+	 * @param string $ref The reference value to add as a parameter.
+	 * @return string The modified URL with added parameters.
+	 */
+	public function add_param_to_url( $url, $ref ) {
+		// Parse the URL.
+		$parsed_url = wp_parse_url( $url );
+
+		// Parse query parameters into an array.
+		parse_str( isset( $parsed_url['query'] ) ? $parsed_url['query'] : '', $query_params );
+
+		// Add the "trxref" and "reference" parameters to the query parameters.
+		$query_params['trxref']    = $ref;
+		$query_params['reference'] = $ref;
+
+		// Rebuild the query string.
+		$query_string = http_build_query( $query_params );
+
+		// Construct the new URL.
+		$new_url  = ( isset( $parsed_url['scheme'] ) ? $parsed_url['scheme'] . '://' : '' );
+		$new_url .= ( isset( $parsed_url['user'] ) ? $parsed_url['user'] . ( isset( $parsed_url['pass'] ) ? ':' . $parsed_url['pass'] : '' ) . '@' : '' );
+		$new_url .= ( isset( $parsed_url['host'] ) ? $parsed_url['host'] : '' );
+		$new_url .= ( isset( $parsed_url['port'] ) ? ':' . $parsed_url['port'] : '' );
+		$new_url .= ( isset( $parsed_url['path'] ) ? $parsed_url['path'] : '' );
+		$new_url .= ( ! empty( $query_string ) ? '?' . $query_string : '' );
+		$new_url .= ( isset( $parsed_url['fragment'] ) ? '#' . $parsed_url['fragment'] : '' );
+
+		return $new_url;
 	}
 
 	/**
@@ -220,10 +285,10 @@ class Confirm_Payment {
 				// phpcs:ignore WordPress.Security.NonceVerification
 				$quantity = (int) sanitize_text_field( wp_unslash( $_POST['quantity'] ) );
 			}
-			$sold     = $this->meta['sold'];
+			$sold = $this->meta['sold'];
 
 			if ( '' === $sold ) {
-				$sold = '0';
+				$sold = 0;
 			}
 			$sold += $quantity;
 		} else {
@@ -247,7 +312,7 @@ class Confirm_Payment {
 		global $wpdb;
 		$table  = $wpdb->prefix . PFF_PAYSTACK_TABLE;
 		$return = [
-			'message' => __( 'DB not updated.', 'pff-paystack' ),
+			'message' => esc_html__( 'DB not updated.', 'pff-paystack' ),
 			'result' => 'failed',
 		];
 
@@ -287,10 +352,10 @@ class Confirm_Payment {
 					'result' => 'success',
 				];
 			} else {
-				if ( $this->oamount !== $amount_paid ) {
+				if ( (int) $this->oamount !== (int) $amount_paid ) {
 					$return = [
 						// translators: %1$s: currency, %2$s: formatted amount required
-						'message' => sprintf( __( 'Invalid amount Paid. Amount required is %1$s<b>%2$s</b>', 'pff-paystack' ), $this->meta['currency'], number_format( $this->oamount ) ),
+						'message' => sprintf( esc_html__( 'Invalid amount Paid. Amount required is %1$s<b>%2$s</b>', 'pff-paystack' ), $this->meta['currency'], number_format( $this->oamount ) ),
 						'result' => 'failed',
 					];
 				} else {

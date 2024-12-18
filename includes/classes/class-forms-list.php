@@ -36,7 +36,7 @@ class Forms_List {
 		if ( get_post_type( $post ) === 'paystack_form' ) {
 			unset( $actions['view'] );
 			unset( $actions['quick edit'] );
-			$actions['export'] = '<a href="' . admin_url( 'edit.php?post_type=paystack_form&page=submissions&form=' . $post->ID ) . '" >' . __( 'View Payments', 'payment_forms' ) . '</a>';
+			$actions['export'] = '<a href="' . admin_url( 'edit.php?post_type=paystack_form&page=submissions&form=' . $post->ID ) . '" >' . esc_html__( 'View Payments', 'payment_forms' ) . '</a>';
 		}
 		return $actions;
 	}
@@ -50,10 +50,10 @@ class Forms_List {
 	public function register_columns( $columns ) {
 		$columns = array(
 			'cb'        => '<input type="checkbox" />',
-			'title'     => __( 'Name', 'pff-paystack' ),
-			'shortcode' => __( 'Shortcode', 'pff-paystack' ),
-			'payments'  => __( 'Payments', 'pff-paystack' ),
-			'date'      => __( 'Date', 'pff-paystack' )
+			'title'     => esc_html__( 'Name', 'pff-paystack' ),
+			'shortcode' => esc_html__( 'Shortcode', 'pff-paystack' ),
+			'payments'  => esc_html__( 'Payments', 'pff-paystack' ),
+			'date'      => esc_html__( 'Date', 'pff-paystack' )
 		);
 		return $columns;
 	}

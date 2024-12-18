@@ -3,9 +3,9 @@ Contributors: paystack, kendysond, steveamaza, sourcecodeink, krugazul, feedmyme
 Donate link: https://paystack.com/demo
 Tags: paystack, recurrent payments, donation, forms, payments
 Requires at least: 5.0
-Tested up to: 6.6
-Stable tag: 4.0.0
-Requires PHP: 7.2
+Tested up to: 6.7
+Stable tag: 4.0.1
+Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,9 +91,18 @@ If you get stuck, you can ask for help in the [Payment Forms for Paystack Plugin
 Yes you can! Join in on our [GitHub repository](https://github.com/PaystackOSS/plugin-payment-forms-for-wordpress) :)
 
 == Changelog ==
+= 4.0.1 =
+* Updating the class initiation to be 7.4 compatible and additional 7.4 fixes
+* Fixing the split transaction field
+* Fixing the receipt owner amount and email address
+* Fixing the display of the submissions page.
+* Fixing the minimum amount field function and validation
+* Updating sprintf for SQL injections.
+
 = 4.0.0 =
 * An entire plugin rewrite, keeping the same functionality.
 * Tested with WordPress 6.2
+
 = 3.4.0 =
 * Support for WordPress 5.9
 * Support for PHP 8

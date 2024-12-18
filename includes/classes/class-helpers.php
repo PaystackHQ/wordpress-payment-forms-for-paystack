@@ -43,8 +43,8 @@ class Helpers {
 	public function __construct() {
 		$this->defaults = [
 			'amount'              => 0,
-			'paybtn'              => __( 'Pay', 'pff-paystack' ),
-			'successmsg'          => __( 'Thank you for paying!', 'pff-paystack' ),
+			'paybtn'              => esc_html__( 'Pay', 'pff-paystack' ),
+			'successmsg'          => esc_html__( 'Thank you for paying!', 'pff-paystack' ),
 			'txncharge'           => 'merchant',
 			'loggedin'            => '',
 			'currency'            => 'NGN',
@@ -57,18 +57,17 @@ class Helpers {
 			'loggedin'            => 'no',
 			'recur'               => 'no',
 			'recurplan'           => '',
-			'subject'             => __( 'Thank you for your payment', 'pff-paystack' ),
-			'merchant'            => '',
-			'heading'             => __( 'We\'ve received your payment', 'pff-paystack' ),
-			'message'             => __( 'Your payment was received and we appreciate it.', 'pff-paystack' ),
+			'subject'             => esc_html__( 'Thank you for your payment', 'pff-paystack' ),
+			'heading'             => esc_html__( 'We\'ve received your payment', 'pff-paystack' ),
+			'message'             => esc_html__( 'Your payment was received and we appreciate it.', 'pff-paystack' ),
 			'sendreceipt'         => 'yes',
 			'sendinvoice'         => 'yes',
 			'usequantity'         => 'no',
 			'useinventory'        => 'no',
-			'inventory'           => '0',
-			'sold'                => '0',
-			'quantity'            => '10',
-			'quantityunit'        => __( 'Quantity', 'pff-paystack' ),
+			'inventory'           => 0,
+			'sold'                => 0,
+			'quantity'            => 10,
+			'quantityunit'        => esc_html__( 'Quantity', 'pff-paystack' ),
 			'useagreement'        => 'no',
 			'agreementlink'       => '',
 			'subaccount'          => '',
@@ -184,23 +183,47 @@ class Helpers {
 			'orderby'  => 'created_at',
 		);
 		$args  = wp_parse_args( $args, $defaults );
-        $table = $wpdb->prefix . PFF_PAYSTACK_TABLE;
+        $table = esc_sql( $wpdb->prefix . PFF_PAYSTACK_TABLE );
 		$order = strtoupper( $args['order'] );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$results = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * 
-				FROM %i 
-				WHERE post_id = %d 
-				AND paid = %s
-				ORDER BY %i $order", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$table,
-				$form_id,
-				$args['paid'],
-				$args['orderby'],
-			)
-		);
+		$current_version = get_bloginfo('version');
+		if ( version_compare( '6.2', $current_version, '<=' ) ) {
+
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * 
+					FROM %i 
+					WHERE post_id = %d 
+					AND paid = %s
+					ORDER BY %i $order",
+					$table,
+					$form_id,
+					$args['paid'],
+					$args['orderby'],
+				)
+			);
+			// phpcs:enable -- Stop ignoring
+
+		} else {
+
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * 
+					FROM `%s` 
+					WHERE post_id = '%d'
+					AND paid = '%s'
+					ORDER BY '%s' $order",
+					$table,
+					$form_id,
+					$args['paid'],
+					$args['orderby'],
+				)
+			);
+			// phpcs:enable -- Stop ignoring
+		}
+
 		return $results;
 	}
 
@@ -215,17 +238,37 @@ class Helpers {
 		$table = $wpdb->prefix . PFF_PAYSTACK_TABLE;
 		$num   = wp_cache_get( 'form_payments_' . $form_id, 'pff_paystack' );
 		if ( false === $num ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$num = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(*)
-					FROM %i
-					WHERE post_id = %d
-					AND paid = '1'",
-					$table,
-					$form_id
-				)
-			);
+
+			$current_version = get_bloginfo('version');
+			if ( version_compare( '6.2', $current_version, '<=' ) ) {
+	
+				// phpcs:disable WordPress.DB -- Start ignoring
+				$num = $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT COUNT(*)
+						FROM %i
+						WHERE post_id = %d
+						AND paid = '1'",
+						$table,
+						$form_id
+					)
+				);
+				// phpcs:enable -- Stop ignoring
+			} else {
+				// phpcs:disable WordPress.DB -- Start ignoring
+				$num = $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT COUNT(*)
+						FROM `%s`
+						WHERE post_id = '%d'
+						AND paid = '1'",
+						$table,
+						$form_id
+					)
+				);
+				// phpcs:enable -- Stop ignoring
+			}
+
 			wp_cache_set( 'form_payments_' . $form_id, $num, 'pff_paystack', 60*5 );
 		}
 		return $num;
@@ -239,245 +282,245 @@ class Helpers {
 	 */
 	public function get_countries( $implode = false ) {
 		$countries = [
-			__( "Afghanistan", 'pff-paystack' ),
-			__( "Albania", 'pff-paystack' ),
-			__( "Algeria", 'pff-paystack' ),
-			__( "American Samoa", 'pff-paystack' ),
-			__( "Andorra", 'pff-paystack' ),
-			__( "Angola", 'pff-paystack' ),
-			__( "Anguilla", 'pff-paystack' ),
-			__( "Antarctica", 'pff-paystack' ),
-			__( "Antigua and Barbuda", 'pff-paystack' ),
-			__( "Argentina", 'pff-paystack' ),
-			__( "Armenia", 'pff-paystack' ),
-			__( "Aruba", 'pff-paystack' ),
-			__( "Australia", 'pff-paystack' ),
-			__( "Austria", 'pff-paystack' ),
-			__( "Azerbaijan", 'pff-paystack' ),
-			__( "Bahamas", 'pff-paystack' ),
-			__( "Bahrain", 'pff-paystack' ),
-			__( "Bangladesh", 'pff-paystack' ),
-			__( "Barbados", 'pff-paystack' ),
-			__( "Belarus", 'pff-paystack' ),
-			__( "Belgium", 'pff-paystack' ),
-			__( "Belize", 'pff-paystack' ),
-			__( "Benin", 'pff-paystack' ),
-			__( "Bermuda", 'pff-paystack' ),
-			__( "Bhutan", 'pff-paystack' ),
-			__( "Bolivia", 'pff-paystack' ),
-			__( "Bosnia and Herzegovina", 'pff-paystack' ),
-			__( "Botswana", 'pff-paystack' ),
-			__( "Bouvet Island", 'pff-paystack' ),
-			__( "Brazil", 'pff-paystack' ),
-			__( "British Indian Ocean Territory", 'pff-paystack' ),
-			__( "Brunei Darussalam", 'pff-paystack' ),
-			__( "Bulgaria", 'pff-paystack' ),
-			__( "Burkina Faso", 'pff-paystack' ),
-			__( "Burundi", 'pff-paystack' ),
-			__( "Cambodia", 'pff-paystack' ),
-			__( "Cameroon", 'pff-paystack' ),
-			__( "Canada", 'pff-paystack' ),
-			__( "Cape Verde", 'pff-paystack' ),
-			__( "Cayman Islands", 'pff-paystack' ),
-			__( "Central African Republic", 'pff-paystack' ),
-			__( "Chad", 'pff-paystack' ),
-			__( "Chile", 'pff-paystack' ),
-			__( "China", 'pff-paystack' ),
-			__( "Christmas Island", 'pff-paystack' ),
-			__( "Cocos (Keeling) Islands", 'pff-paystack' ),
-			__( "Colombia", 'pff-paystack' ),
-			__( "Comoros", 'pff-paystack' ),
-			__( "Congo", 'pff-paystack' ),
-			__( "Congo, The Democratic Republic of The", 'pff-paystack' ),
-			__( "Cook Islands", 'pff-paystack' ),
-			__( "Costa Rica", 'pff-paystack' ),
-			__( "Cote D'ivoire", 'pff-paystack' ),
-			__( "Croatia", 'pff-paystack' ),
-			__( "Cuba", 'pff-paystack' ),
-			__( "Cyprus", 'pff-paystack' ),
-			__( "Czech Republic", 'pff-paystack' ),
-			__( "Denmark", 'pff-paystack' ),
-			__( "Djibouti", 'pff-paystack' ),
-			__( "Dominica", 'pff-paystack' ),
-			__( "Dominican Republic", 'pff-paystack' ),
-			__( "Ecuador", 'pff-paystack' ),
-			__( "Egypt", 'pff-paystack' ),
-			__( "El Salvador", 'pff-paystack' ),
-			__( "Equatorial Guinea", 'pff-paystack' ),
-			__( "Eritrea", 'pff-paystack' ),
-			__( "Estonia", 'pff-paystack' ),
-			__( "Ethiopia", 'pff-paystack' ),
-			__( "Falkland Islands (Malvinas)", 'pff-paystack' ),
-			__( "Faroe Islands", 'pff-paystack' ),
-			__( "Fiji", 'pff-paystack' ),
-			__( "Finland", 'pff-paystack' ),
-			__( "France", 'pff-paystack' ),
-			__( "French Guiana", 'pff-paystack' ),
-			__( "French Polynesia", 'pff-paystack' ),
-			__( "French Southern Territories", 'pff-paystack' ),
-			__( "Gabon", 'pff-paystack' ),
-			__( "Gambia", 'pff-paystack' ),
-			__( "Georgia", 'pff-paystack' ),
-			__( "Germany", 'pff-paystack' ),
-			__( "Ghana", 'pff-paystack' ),
-			__( "Gibraltar", 'pff-paystack' ),
-			__( "Greece", 'pff-paystack' ),
-			__( "Greenland", 'pff-paystack' ),
-			__( "Grenada", 'pff-paystack' ),
-			__( "Guadeloupe", 'pff-paystack' ),
-			__( "Guam", 'pff-paystack' ),
-			__( "Guatemala", 'pff-paystack' ),
-			__( "Guinea", 'pff-paystack' ),
-			__( "Guinea-bissau", 'pff-paystack' ),
-			__( "Guyana", 'pff-paystack' ),
-			__( "Haiti", 'pff-paystack' ),
-			__( "Heard Island and Mcdonald Islands", 'pff-paystack' ),
-			__( "Holy See (Vatican City State)", 'pff-paystack' ),
-			__( "Honduras", 'pff-paystack' ),
-			__( "Hong Kong", 'pff-paystack' ),
-			__( "Hungary", 'pff-paystack' ),
-			__( "Iceland", 'pff-paystack' ),
-			__( "India", 'pff-paystack' ),
-			__( "Indonesia", 'pff-paystack' ),
-			__( "Iran, Islamic Republic of", 'pff-paystack' ),
-			__( "Iraq", 'pff-paystack' ),
-			__( "Ireland", 'pff-paystack' ),
-			__( "Israel", 'pff-paystack' ),
-			__( "Italy", 'pff-paystack' ),
-			__( "Jamaica", 'pff-paystack' ),
-			__( "Japan", 'pff-paystack' ),
-			__( "Jordan", 'pff-paystack' ),
-			__( "Kazakhstan", 'pff-paystack' ),
-			__( "Kenya", 'pff-paystack' ),
-			__( "Kiribati", 'pff-paystack' ),
-			__( "Korea, Democratic People's Republic of", 'pff-paystack' ),
-			__( "Korea, Republic of", 'pff-paystack' ),
-			__( "Kuwait", 'pff-paystack' ),
-			__( "Kyrgyzstan", 'pff-paystack' ),
-			__( "Lao People's Democratic Republic", 'pff-paystack' ),
-			__( "Latvia", 'pff-paystack' ),
-			__( "Lebanon", 'pff-paystack' ),
-			__( "Lesotho", 'pff-paystack' ),
-			__( "Liberia", 'pff-paystack' ),
-			__( "Libyan Arab Jamahiriya", 'pff-paystack' ),
-			__( "Liechtenstein", 'pff-paystack' ),
-			__( "Lithuania", 'pff-paystack' ),
-			__( "Luxembourg", 'pff-paystack' ),
-			__( "Macao", 'pff-paystack' ),
-			__( "Macedonia, The Former Yugoslav Republic of", 'pff-paystack' ),
-			__( "Madagascar", 'pff-paystack' ),
-			__( "Malawi", 'pff-paystack' ),
-			__( "Malaysia", 'pff-paystack' ),
-			__( "Maldives", 'pff-paystack' ),
-			__( "Mali", 'pff-paystack' ),
-			__( "Malta", 'pff-paystack' ),
-			__( "Marshall Islands", 'pff-paystack' ),
-			__( "Martinique", 'pff-paystack' ),
-			__( "Mauritania", 'pff-paystack' ),
-			__( "Mauritius", 'pff-paystack' ),
-			__( "Mayotte", 'pff-paystack' ),
-			__( "Mexico", 'pff-paystack' ),
-			__( "Micronesia, Federated States of", 'pff-paystack' ),
-			__( "Moldova, Republic of", 'pff-paystack' ),
-			__( "Monaco", 'pff-paystack' ),
-			__( "Mongolia", 'pff-paystack' ),
-			__( "Montserrat", 'pff-paystack' ),
-			__( "Morocco", 'pff-paystack' ),
-			__( "Mozambique", 'pff-paystack' ),
-			__( "Myanmar", 'pff-paystack' ),
-			__( "Namibia", 'pff-paystack' ),
-			__( "Nauru", 'pff-paystack' ),
-			__( "Nepal", 'pff-paystack' ),
-			__( "Netherlands", 'pff-paystack' ),
-			__( "Netherlands Antilles", 'pff-paystack' ),
-			__( "New Caledonia", 'pff-paystack' ),
-			__( "New Zealand", 'pff-paystack' ),
-			__( "Nicaragua", 'pff-paystack' ),
-			__( "Niger", 'pff-paystack' ),
-			__( "Nigeria", 'pff-paystack' ),
-			__( "Niue", 'pff-paystack' ),
-			__( "Norfolk Island", 'pff-paystack' ),
-			__( "Northern Mariana Islands", 'pff-paystack' ),
-			__( "Norway", 'pff-paystack' ),
-			__( "Oman", 'pff-paystack' ),
-			__( "Pakistan", 'pff-paystack' ),
-			__( "Palau", 'pff-paystack' ),
-			__( "Palestinian Territory, Occupied", 'pff-paystack' ),
-			__( "Panama", 'pff-paystack' ),
-			__( "Papua New Guinea", 'pff-paystack' ),
-			__( "Paraguay", 'pff-paystack' ),
-			__( "Peru", 'pff-paystack' ),
-			__( "Philippines", 'pff-paystack' ),
-			__( "Pitcairn", 'pff-paystack' ),
-			__( "Poland", 'pff-paystack' ),
-			__( "Portugal", 'pff-paystack' ),
-			__( "Puerto Rico", 'pff-paystack' ),
-			__( "Qatar", 'pff-paystack' ),
-			__( "Reunion", 'pff-paystack' ),
-			__( "Romania", 'pff-paystack' ),
-			__( "Russian Federation", 'pff-paystack' ),
-			__( "Rwanda", 'pff-paystack' ),
-			__( "Saint Helena", 'pff-paystack' ),
-			__( "Saint Kitts and Nevis", 'pff-paystack' ),
-			__( "Saint Lucia", 'pff-paystack' ),
-			__( "Saint Pierre and Miquelon", 'pff-paystack' ),
-			__( "Saint Vincent and The Grenadines", 'pff-paystack' ),
-			__( "Samoa", 'pff-paystack' ),
-			__( "San Marino", 'pff-paystack' ),
-			__( "Sao Tome and Principe", 'pff-paystack' ),
-			__( "Saudi Arabia", 'pff-paystack' ),
-			__( "Senegal", 'pff-paystack' ),
-			__( "Serbia and Montenegro", 'pff-paystack' ),
-			__( "Seychelles", 'pff-paystack' ),
-			__( "Sierra Leone", 'pff-paystack' ),
-			__( "Singapore", 'pff-paystack' ),
-			__( "Slovakia", 'pff-paystack' ),
-			__( "Slovenia", 'pff-paystack' ),
-			__( "Solomon Islands", 'pff-paystack' ),
-			__( "Somalia", 'pff-paystack' ),
-			__( "South Africa", 'pff-paystack' ),
-			__( "South Georgia and The South Sandwich Islands", 'pff-paystack' ),
-			__( "Spain", 'pff-paystack' ),
-			__( "Sri Lanka", 'pff-paystack' ),
-			__( "Sudan", 'pff-paystack' ),
-			__( "Suriname", 'pff-paystack' ),
-			__( "Svalbard and Jan Mayen", 'pff-paystack' ),
-			__( "Swaziland", 'pff-paystack' ),
-			__( "Sweden", 'pff-paystack' ),
-			__( "Switzerland", 'pff-paystack' ),
-			__( "Syrian Arab Republic", 'pff-paystack' ),
-			__( "Taiwan, Province of China", 'pff-paystack' ),
-			__( "Tajikistan", 'pff-paystack' ),
-			__( "Tanzania, United Republic of", 'pff-paystack' ),
-			__( "Thailand", 'pff-paystack' ),
-			__( "Timor-leste", 'pff-paystack' ),
-			__( "Togo", 'pff-paystack' ),
-			__( "Tokelau", 'pff-paystack' ),
-			__( "Tonga", 'pff-paystack' ),
-			__( "Trinidad and Tobago", 'pff-paystack' ),
-			__( "Tunisia", 'pff-paystack' ),
-			__( "Turkey", 'pff-paystack' ),
-			__( "Turkmenistan", 'pff-paystack' ),
-			__( "Turks and Caicos Islands", 'pff-paystack' ),
-			__( "Tuvalu", 'pff-paystack' ),
-			__( "Uganda", 'pff-paystack' ),
-			__( "Ukraine", 'pff-paystack' ),
-			__( "United Arab Emirates", 'pff-paystack' ),
-			__( "United Kingdom", 'pff-paystack' ),
-			__( "United States", 'pff-paystack' ),
-			__( "United States Minor Outlying Islands", 'pff-paystack' ),
-			__( "Uruguay", 'pff-paystack' ),
-			__( "Uzbekistan", 'pff-paystack' ),
-			__( "Vanuatu", 'pff-paystack' ),
-			__( "Venezuela", 'pff-paystack' ),
-			__( "Viet Nam", 'pff-paystack' ),
-			__( "Virgin Islands; British", 'pff-paystack' ),
-			__( "Virgin Islands; U.S.", 'pff-paystack' ),
-			__( "Wallis and Futuna", 'pff-paystack' ),
-			__( "Western Sahara", 'pff-paystack' ),
-			__( "Yemen", 'pff-paystack' ),
-			__( "Zambia", 'pff-paystack' ),
-			__( "Zimbabwe", 'pff-paystack' ),
+			esc_html__( "Afghanistan", 'pff-paystack' ),
+			esc_html__( "Albania", 'pff-paystack' ),
+			esc_html__( "Algeria", 'pff-paystack' ),
+			esc_html__( "American Samoa", 'pff-paystack' ),
+			esc_html__( "Andorra", 'pff-paystack' ),
+			esc_html__( "Angola", 'pff-paystack' ),
+			esc_html__( "Anguilla", 'pff-paystack' ),
+			esc_html__( "Antarctica", 'pff-paystack' ),
+			esc_html__( "Antigua and Barbuda", 'pff-paystack' ),
+			esc_html__( "Argentina", 'pff-paystack' ),
+			esc_html__( "Armenia", 'pff-paystack' ),
+			esc_html__( "Aruba", 'pff-paystack' ),
+			esc_html__( "Australia", 'pff-paystack' ),
+			esc_html__( "Austria", 'pff-paystack' ),
+			esc_html__( "Azerbaijan", 'pff-paystack' ),
+			esc_html__( "Bahamas", 'pff-paystack' ),
+			esc_html__( "Bahrain", 'pff-paystack' ),
+			esc_html__( "Bangladesh", 'pff-paystack' ),
+			esc_html__( "Barbados", 'pff-paystack' ),
+			esc_html__( "Belarus", 'pff-paystack' ),
+			esc_html__( "Belgium", 'pff-paystack' ),
+			esc_html__( "Belize", 'pff-paystack' ),
+			esc_html__( "Benin", 'pff-paystack' ),
+			esc_html__( "Bermuda", 'pff-paystack' ),
+			esc_html__( "Bhutan", 'pff-paystack' ),
+			esc_html__( "Bolivia", 'pff-paystack' ),
+			esc_html__( "Bosnia and Herzegovina", 'pff-paystack' ),
+			esc_html__( "Botswana", 'pff-paystack' ),
+			esc_html__( "Bouvet Island", 'pff-paystack' ),
+			esc_html__( "Brazil", 'pff-paystack' ),
+			esc_html__( "British Indian Ocean Territory", 'pff-paystack' ),
+			esc_html__( "Brunei Darussalam", 'pff-paystack' ),
+			esc_html__( "Bulgaria", 'pff-paystack' ),
+			esc_html__( "Burkina Faso", 'pff-paystack' ),
+			esc_html__( "Burundi", 'pff-paystack' ),
+			esc_html__( "Cambodia", 'pff-paystack' ),
+			esc_html__( "Cameroon", 'pff-paystack' ),
+			esc_html__( "Canada", 'pff-paystack' ),
+			esc_html__( "Cape Verde", 'pff-paystack' ),
+			esc_html__( "Cayman Islands", 'pff-paystack' ),
+			esc_html__( "Central African Republic", 'pff-paystack' ),
+			esc_html__( "Chad", 'pff-paystack' ),
+			esc_html__( "Chile", 'pff-paystack' ),
+			esc_html__( "China", 'pff-paystack' ),
+			esc_html__( "Christmas Island", 'pff-paystack' ),
+			esc_html__( "Cocos (Keeling) Islands", 'pff-paystack' ),
+			esc_html__( "Colombia", 'pff-paystack' ),
+			esc_html__( "Comoros", 'pff-paystack' ),
+			esc_html__( "Congo", 'pff-paystack' ),
+			esc_html__( "Congo, The Democratic Republic of The", 'pff-paystack' ),
+			esc_html__( "Cook Islands", 'pff-paystack' ),
+			esc_html__( "Costa Rica", 'pff-paystack' ),
+			esc_html__( "Cote D'ivoire", 'pff-paystack' ),
+			esc_html__( "Croatia", 'pff-paystack' ),
+			esc_html__( "Cuba", 'pff-paystack' ),
+			esc_html__( "Cyprus", 'pff-paystack' ),
+			esc_html__( "Czech Republic", 'pff-paystack' ),
+			esc_html__( "Denmark", 'pff-paystack' ),
+			esc_html__( "Djibouti", 'pff-paystack' ),
+			esc_html__( "Dominica", 'pff-paystack' ),
+			esc_html__( "Dominican Republic", 'pff-paystack' ),
+			esc_html__( "Ecuador", 'pff-paystack' ),
+			esc_html__( "Egypt", 'pff-paystack' ),
+			esc_html__( "El Salvador", 'pff-paystack' ),
+			esc_html__( "Equatorial Guinea", 'pff-paystack' ),
+			esc_html__( "Eritrea", 'pff-paystack' ),
+			esc_html__( "Estonia", 'pff-paystack' ),
+			esc_html__( "Ethiopia", 'pff-paystack' ),
+			esc_html__( "Falkland Islands (Malvinas)", 'pff-paystack' ),
+			esc_html__( "Faroe Islands", 'pff-paystack' ),
+			esc_html__( "Fiji", 'pff-paystack' ),
+			esc_html__( "Finland", 'pff-paystack' ),
+			esc_html__( "France", 'pff-paystack' ),
+			esc_html__( "French Guiana", 'pff-paystack' ),
+			esc_html__( "French Polynesia", 'pff-paystack' ),
+			esc_html__( "French Southern Territories", 'pff-paystack' ),
+			esc_html__( "Gabon", 'pff-paystack' ),
+			esc_html__( "Gambia", 'pff-paystack' ),
+			esc_html__( "Georgia", 'pff-paystack' ),
+			esc_html__( "Germany", 'pff-paystack' ),
+			esc_html__( "Ghana", 'pff-paystack' ),
+			esc_html__( "Gibraltar", 'pff-paystack' ),
+			esc_html__( "Greece", 'pff-paystack' ),
+			esc_html__( "Greenland", 'pff-paystack' ),
+			esc_html__( "Grenada", 'pff-paystack' ),
+			esc_html__( "Guadeloupe", 'pff-paystack' ),
+			esc_html__( "Guam", 'pff-paystack' ),
+			esc_html__( "Guatemala", 'pff-paystack' ),
+			esc_html__( "Guinea", 'pff-paystack' ),
+			esc_html__( "Guinea-bissau", 'pff-paystack' ),
+			esc_html__( "Guyana", 'pff-paystack' ),
+			esc_html__( "Haiti", 'pff-paystack' ),
+			esc_html__( "Heard Island and Mcdonald Islands", 'pff-paystack' ),
+			esc_html__( "Holy See (Vatican City State)", 'pff-paystack' ),
+			esc_html__( "Honduras", 'pff-paystack' ),
+			esc_html__( "Hong Kong", 'pff-paystack' ),
+			esc_html__( "Hungary", 'pff-paystack' ),
+			esc_html__( "Iceland", 'pff-paystack' ),
+			esc_html__( "India", 'pff-paystack' ),
+			esc_html__( "Indonesia", 'pff-paystack' ),
+			esc_html__( "Iran, Islamic Republic of", 'pff-paystack' ),
+			esc_html__( "Iraq", 'pff-paystack' ),
+			esc_html__( "Ireland", 'pff-paystack' ),
+			esc_html__( "Israel", 'pff-paystack' ),
+			esc_html__( "Italy", 'pff-paystack' ),
+			esc_html__( "Jamaica", 'pff-paystack' ),
+			esc_html__( "Japan", 'pff-paystack' ),
+			esc_html__( "Jordan", 'pff-paystack' ),
+			esc_html__( "Kazakhstan", 'pff-paystack' ),
+			esc_html__( "Kenya", 'pff-paystack' ),
+			esc_html__( "Kiribati", 'pff-paystack' ),
+			esc_html__( "Korea, Democratic People's Republic of", 'pff-paystack' ),
+			esc_html__( "Korea, Republic of", 'pff-paystack' ),
+			esc_html__( "Kuwait", 'pff-paystack' ),
+			esc_html__( "Kyrgyzstan", 'pff-paystack' ),
+			esc_html__( "Lao People's Democratic Republic", 'pff-paystack' ),
+			esc_html__( "Latvia", 'pff-paystack' ),
+			esc_html__( "Lebanon", 'pff-paystack' ),
+			esc_html__( "Lesotho", 'pff-paystack' ),
+			esc_html__( "Liberia", 'pff-paystack' ),
+			esc_html__( "Libyan Arab Jamahiriya", 'pff-paystack' ),
+			esc_html__( "Liechtenstein", 'pff-paystack' ),
+			esc_html__( "Lithuania", 'pff-paystack' ),
+			esc_html__( "Luxembourg", 'pff-paystack' ),
+			esc_html__( "Macao", 'pff-paystack' ),
+			esc_html__( "Macedonia, The Former Yugoslav Republic of", 'pff-paystack' ),
+			esc_html__( "Madagascar", 'pff-paystack' ),
+			esc_html__( "Malawi", 'pff-paystack' ),
+			esc_html__( "Malaysia", 'pff-paystack' ),
+			esc_html__( "Maldives", 'pff-paystack' ),
+			esc_html__( "Mali", 'pff-paystack' ),
+			esc_html__( "Malta", 'pff-paystack' ),
+			esc_html__( "Marshall Islands", 'pff-paystack' ),
+			esc_html__( "Martinique", 'pff-paystack' ),
+			esc_html__( "Mauritania", 'pff-paystack' ),
+			esc_html__( "Mauritius", 'pff-paystack' ),
+			esc_html__( "Mayotte", 'pff-paystack' ),
+			esc_html__( "Mexico", 'pff-paystack' ),
+			esc_html__( "Micronesia, Federated States of", 'pff-paystack' ),
+			esc_html__( "Moldova, Republic of", 'pff-paystack' ),
+			esc_html__( "Monaco", 'pff-paystack' ),
+			esc_html__( "Mongolia", 'pff-paystack' ),
+			esc_html__( "Montserrat", 'pff-paystack' ),
+			esc_html__( "Morocco", 'pff-paystack' ),
+			esc_html__( "Mozambique", 'pff-paystack' ),
+			esc_html__( "Myanmar", 'pff-paystack' ),
+			esc_html__( "Namibia", 'pff-paystack' ),
+			esc_html__( "Nauru", 'pff-paystack' ),
+			esc_html__( "Nepal", 'pff-paystack' ),
+			esc_html__( "Netherlands", 'pff-paystack' ),
+			esc_html__( "Netherlands Antilles", 'pff-paystack' ),
+			esc_html__( "New Caledonia", 'pff-paystack' ),
+			esc_html__( "New Zealand", 'pff-paystack' ),
+			esc_html__( "Nicaragua", 'pff-paystack' ),
+			esc_html__( "Niger", 'pff-paystack' ),
+			esc_html__( "Nigeria", 'pff-paystack' ),
+			esc_html__( "Niue", 'pff-paystack' ),
+			esc_html__( "Norfolk Island", 'pff-paystack' ),
+			esc_html__( "Northern Mariana Islands", 'pff-paystack' ),
+			esc_html__( "Norway", 'pff-paystack' ),
+			esc_html__( "Oman", 'pff-paystack' ),
+			esc_html__( "Pakistan", 'pff-paystack' ),
+			esc_html__( "Palau", 'pff-paystack' ),
+			esc_html__( "Palestinian Territory, Occupied", 'pff-paystack' ),
+			esc_html__( "Panama", 'pff-paystack' ),
+			esc_html__( "Papua New Guinea", 'pff-paystack' ),
+			esc_html__( "Paraguay", 'pff-paystack' ),
+			esc_html__( "Peru", 'pff-paystack' ),
+			esc_html__( "Philippines", 'pff-paystack' ),
+			esc_html__( "Pitcairn", 'pff-paystack' ),
+			esc_html__( "Poland", 'pff-paystack' ),
+			esc_html__( "Portugal", 'pff-paystack' ),
+			esc_html__( "Puerto Rico", 'pff-paystack' ),
+			esc_html__( "Qatar", 'pff-paystack' ),
+			esc_html__( "Reunion", 'pff-paystack' ),
+			esc_html__( "Romania", 'pff-paystack' ),
+			esc_html__( "Russian Federation", 'pff-paystack' ),
+			esc_html__( "Rwanda", 'pff-paystack' ),
+			esc_html__( "Saint Helena", 'pff-paystack' ),
+			esc_html__( "Saint Kitts and Nevis", 'pff-paystack' ),
+			esc_html__( "Saint Lucia", 'pff-paystack' ),
+			esc_html__( "Saint Pierre and Miquelon", 'pff-paystack' ),
+			esc_html__( "Saint Vincent and The Grenadines", 'pff-paystack' ),
+			esc_html__( "Samoa", 'pff-paystack' ),
+			esc_html__( "San Marino", 'pff-paystack' ),
+			esc_html__( "Sao Tome and Principe", 'pff-paystack' ),
+			esc_html__( "Saudi Arabia", 'pff-paystack' ),
+			esc_html__( "Senegal", 'pff-paystack' ),
+			esc_html__( "Serbia and Montenegro", 'pff-paystack' ),
+			esc_html__( "Seychelles", 'pff-paystack' ),
+			esc_html__( "Sierra Leone", 'pff-paystack' ),
+			esc_html__( "Singapore", 'pff-paystack' ),
+			esc_html__( "Slovakia", 'pff-paystack' ),
+			esc_html__( "Slovenia", 'pff-paystack' ),
+			esc_html__( "Solomon Islands", 'pff-paystack' ),
+			esc_html__( "Somalia", 'pff-paystack' ),
+			esc_html__( "South Africa", 'pff-paystack' ),
+			esc_html__( "South Georgia and The South Sandwich Islands", 'pff-paystack' ),
+			esc_html__( "Spain", 'pff-paystack' ),
+			esc_html__( "Sri Lanka", 'pff-paystack' ),
+			esc_html__( "Sudan", 'pff-paystack' ),
+			esc_html__( "Suriname", 'pff-paystack' ),
+			esc_html__( "Svalbard and Jan Mayen", 'pff-paystack' ),
+			esc_html__( "Swaziland", 'pff-paystack' ),
+			esc_html__( "Sweden", 'pff-paystack' ),
+			esc_html__( "Switzerland", 'pff-paystack' ),
+			esc_html__( "Syrian Arab Republic", 'pff-paystack' ),
+			esc_html__( "Taiwan, Province of China", 'pff-paystack' ),
+			esc_html__( "Tajikistan", 'pff-paystack' ),
+			esc_html__( "Tanzania, United Republic of", 'pff-paystack' ),
+			esc_html__( "Thailand", 'pff-paystack' ),
+			esc_html__( "Timor-leste", 'pff-paystack' ),
+			esc_html__( "Togo", 'pff-paystack' ),
+			esc_html__( "Tokelau", 'pff-paystack' ),
+			esc_html__( "Tonga", 'pff-paystack' ),
+			esc_html__( "Trinidad and Tobago", 'pff-paystack' ),
+			esc_html__( "Tunisia", 'pff-paystack' ),
+			esc_html__( "Turkey", 'pff-paystack' ),
+			esc_html__( "Turkmenistan", 'pff-paystack' ),
+			esc_html__( "Turks and Caicos Islands", 'pff-paystack' ),
+			esc_html__( "Tuvalu", 'pff-paystack' ),
+			esc_html__( "Uganda", 'pff-paystack' ),
+			esc_html__( "Ukraine", 'pff-paystack' ),
+			esc_html__( "United Arab Emirates", 'pff-paystack' ),
+			esc_html__( "United Kingdom", 'pff-paystack' ),
+			esc_html__( "United States", 'pff-paystack' ),
+			esc_html__( "United States Minor Outlying Islands", 'pff-paystack' ),
+			esc_html__( "Uruguay", 'pff-paystack' ),
+			esc_html__( "Uzbekistan", 'pff-paystack' ),
+			esc_html__( "Vanuatu", 'pff-paystack' ),
+			esc_html__( "Venezuela", 'pff-paystack' ),
+			esc_html__( "Viet Nam", 'pff-paystack' ),
+			esc_html__( "Virgin Islands; British", 'pff-paystack' ),
+			esc_html__( "Virgin Islands; U.S.", 'pff-paystack' ),
+			esc_html__( "Wallis and Futuna", 'pff-paystack' ),
+			esc_html__( "Western Sahara", 'pff-paystack' ),
+			esc_html__( "Yemen", 'pff-paystack' ),
+			esc_html__( "Zambia", 'pff-paystack' ),
+			esc_html__( "Zimbabwe", 'pff-paystack' ),
 		];	
 		if ( $implode ) {
 			$countries = implode( ',', $countries );
@@ -493,43 +536,43 @@ class Helpers {
 	 */
 	public function get_states( $implode = false ) {
 		$states = [
-			__( 'Abia', 'pff-paystack' ),
-			__( 'Adamawa', 'pff-paystack' ),
-			__( 'Akwa Ibom', 'pff-paystack' ),
-			__( 'Anambra', 'pff-paystack' ),
-			__( 'Bauchi', 'pff-paystack' ),
-			__( 'Bayelsa', 'pff-paystack' ),
-			__( 'Benue', 'pff-paystack' ),
-			__( 'Borno', 'pff-paystack' ),
-			__( 'Cross River', 'pff-paystack' ),
-			__( 'Delta', 'pff-paystack' ),
-			__( 'Ebonyi', 'pff-paystack' ),
-			__( 'Edo', 'pff-paystack' ),
-			__( 'Ekiti', 'pff-paystack' ),
-			__( 'Enugu', 'pff-paystack' ),
-			__( 'FCT', 'pff-paystack' ),
-			__( 'Gombe', 'pff-paystack' ),
-			__( 'Imo', 'pff-paystack' ),
-			__( 'Jigawa', 'pff-paystack' ),
-			__( 'Kaduna', 'pff-paystack' ),
-			__( 'Kano', 'pff-paystack' ),
-			__( 'Katsina', 'pff-paystack' ),
-			__( 'Kebbi', 'pff-paystack' ),
-			__( 'Kogi', 'pff-paystack' ),
-			__( 'Kwara', 'pff-paystack' ),
-			__( 'Lagos', 'pff-paystack' ),
-			__( 'Nasarawa', 'pff-paystack' ),
-			__( 'Niger', 'pff-paystack' ),
-			__( 'Ogun', 'pff-paystack' ),
-			__( 'Ondo', 'pff-paystack' ),
-			__( 'Osun', 'pff-paystack' ),
-			__( 'Oyo', 'pff-paystack' ),
-			__( 'Plateau', 'pff-paystack' ),
-			__( 'Rivers', 'pff-paystack' ),
-			__( 'Sokoto', 'pff-paystack' ),
-			__( 'Taraba', 'pff-paystack' ),
-			__( 'Yobe', 'pff-paystack' ),
-			__( 'Zamfara', 'pff-paystack' ),
+			esc_html__( 'Abia', 'pff-paystack' ),
+			esc_html__( 'Adamawa', 'pff-paystack' ),
+			esc_html__( 'Akwa Ibom', 'pff-paystack' ),
+			esc_html__( 'Anambra', 'pff-paystack' ),
+			esc_html__( 'Bauchi', 'pff-paystack' ),
+			esc_html__( 'Bayelsa', 'pff-paystack' ),
+			esc_html__( 'Benue', 'pff-paystack' ),
+			esc_html__( 'Borno', 'pff-paystack' ),
+			esc_html__( 'Cross River', 'pff-paystack' ),
+			esc_html__( 'Delta', 'pff-paystack' ),
+			esc_html__( 'Ebonyi', 'pff-paystack' ),
+			esc_html__( 'Edo', 'pff-paystack' ),
+			esc_html__( 'Ekiti', 'pff-paystack' ),
+			esc_html__( 'Enugu', 'pff-paystack' ),
+			esc_html__( 'FCT', 'pff-paystack' ),
+			esc_html__( 'Gombe', 'pff-paystack' ),
+			esc_html__( 'Imo', 'pff-paystack' ),
+			esc_html__( 'Jigawa', 'pff-paystack' ),
+			esc_html__( 'Kaduna', 'pff-paystack' ),
+			esc_html__( 'Kano', 'pff-paystack' ),
+			esc_html__( 'Katsina', 'pff-paystack' ),
+			esc_html__( 'Kebbi', 'pff-paystack' ),
+			esc_html__( 'Kogi', 'pff-paystack' ),
+			esc_html__( 'Kwara', 'pff-paystack' ),
+			esc_html__( 'Lagos', 'pff-paystack' ),
+			esc_html__( 'Nasarawa', 'pff-paystack' ),
+			esc_html__( 'Niger', 'pff-paystack' ),
+			esc_html__( 'Ogun', 'pff-paystack' ),
+			esc_html__( 'Ondo', 'pff-paystack' ),
+			esc_html__( 'Osun', 'pff-paystack' ),
+			esc_html__( 'Oyo', 'pff-paystack' ),
+			esc_html__( 'Plateau', 'pff-paystack' ),
+			esc_html__( 'Rivers', 'pff-paystack' ),
+			esc_html__( 'Sokoto', 'pff-paystack' ),
+			esc_html__( 'Taraba', 'pff-paystack' ),
+			esc_html__( 'Yobe', 'pff-paystack' ),
+			esc_html__( 'Zamfara', 'pff-paystack' ),
 		];
 		if ( $implode ) {
 			$states = implode( ',', $states );
@@ -573,7 +616,6 @@ class Helpers {
 
 		return $ip;
 	}
-
 	
 	/**
 	 * Get the DB records by the transaction code supplied.
@@ -584,18 +626,36 @@ class Helpers {
 	public function get_db_record( $code, $column = 'txn_code' ) {
 		global $wpdb;
 		$return = false;
-		$table  = $wpdb->prefix . PFF_PAYSTACK_TABLE;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$record = $wpdb->get_results(
-			$wpdb->prepare(
-					"SELECT * 
-					FROM %i 
-					WHERE %i = %s"
-				,
-				$table,
-				$column,
-				$code
-			), 'OBJECT' );
+		$table  = esc_sql( $wpdb->prefix . PFF_PAYSTACK_TABLE );
+
+		$current_version = get_bloginfo('version');
+		if ( version_compare( '6.2', $current_version, '<=' ) ) {
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$record = $wpdb->get_results(
+				$wpdb->prepare(
+						"SELECT * 
+						FROM %i 
+						WHERE %i = %s"
+					,
+					$table,
+					$column,
+					$code
+				), 'OBJECT' );
+			// phpcs:enable -- Stop ignoring
+		} else {
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$record = $wpdb->get_results(
+				$wpdb->prepare(
+						"SELECT * 
+						FROM `%s`
+						WHERE '%s' = '%s'"
+					,
+					$table,
+					$column,
+					$code
+				), 'OBJECT' );
+			// phpcs:enable -- Stop ignoring
+		}
 
 		if ( ! empty( $record ) && isset( $record[0] ) ) {
 			$return = $record[0];
@@ -634,7 +694,7 @@ class Helpers {
 			$meta['usevariableamount'] = (int) $meta['usevariableamount'];
 		}
 
-		$meta['minimum']   = floatval( $meta['minimum'] );
+		$meta['minimum']   = (int) $meta['minimum'];
 		//$meta['txncharge'] = floatval( $meta['txncharge'] );
 		return $meta;
 	}
@@ -656,7 +716,7 @@ class Helpers {
 			switch ( $key ) {
 				case 'pf-fname':
 					$fields[] = array(
-						'display_name'  => __( 'Full Name', 'pff-paystack' ),
+						'display_name'  => esc_html__( 'Full Name', 'pff-paystack' ),
 						'variable_name' => 'Full_Name',
 						'type'          => 'text',
 						'value'         => $value,
@@ -665,7 +725,7 @@ class Helpers {
 
 				case 'pf-plancode':
 					$fields[] = array(
-						'display_name'  => __( 'Plan', 'pff-paystack' ),
+						'display_name'  => esc_html__( 'Plan', 'pff-paystack' ),
 						'variable_name' => 'Plan',
 						'type'          => 'text',
 						'value'         => $value,
@@ -674,7 +734,7 @@ class Helpers {
 
 				case 'pf-vname':
 					$fields[] = array(
-						'display_name'  => __( 'Payment Option', 'pff-paystack' ),
+						'display_name'  => esc_html__( 'Payment Option', 'pff-paystack' ),
 						'variable_name' => 'Payment Option',
 						'type'          => 'text',
 						'value'         => $value,
@@ -683,7 +743,7 @@ class Helpers {
 
 				case 'pf-interval':
 					$fields[] = array(
-						'display_name'  => __( 'Plan Interval', 'pff-paystack' ),
+						'display_name'  => esc_html__( 'Plan Interval', 'pff-paystack' ),
 						'variable_name' => 'Plan Interval',
 						'type'          => 'text',
 						'value'         => $value,
@@ -692,7 +752,7 @@ class Helpers {
 
 				case 'pf-quantity':
 					$fields[] = array(
-						'display_name'  => __( 'Quantity', 'pff-paystack' ),
+						'display_name'  => esc_html__( 'Quantity', 'pff-paystack' ),
 						'variable_name' => 'Quantity',
 						'type'          => 'text',
 						'value'         => $value,
@@ -742,7 +802,7 @@ class Helpers {
 						</div>',
 						esc_html( $item->display_name ),
 						esc_url( $item->value ),
-						__( 'link', 'pff-paystack' )
+						esc_html__( 'link', 'pff-paystack' )
 					);
 				}
 			}
@@ -790,15 +850,32 @@ class Helpers {
 	 */
 	public function check_code( $code ) {
 		global $wpdb;
-		$table = $wpdb->prefix . PFF_PAYSTACK_TABLE;
+		$table = esc_sql( $wpdb->prefix . PFF_PAYSTACK_TABLE );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$o_exist = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM %i WHERE txn_code = %s",
-				$table,
-				$code
-			)
-		);
+
+		$current_version = get_bloginfo('version');
+		if ( version_compare( '6.2', $current_version, '<=' ) ) {
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$o_exist = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * FROM %i WHERE txn_code = %s",
+					$table,
+					$code
+				)
+			);
+			// phpcs:enable -- Stop ignoring
+		} else {
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$o_exist = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * FROM `%s` WHERE txn_code = %s",
+					$table,
+					$code
+				)
+			);
+			// phpcs:enable -- Stop ignoring
+		}
+
 		return ( count( $o_exist ) > 0 );
 	}
 

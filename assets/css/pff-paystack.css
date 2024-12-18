@@ -617,6 +617,7 @@
 /* Inputs
 =============================== */
 .j-forms input[type="text"],
+.j-forms input[type="number"],
 .j-forms input[type="password"],
 .j-forms input[type="email"],
 .j-forms input[type="search"],
@@ -650,6 +651,7 @@
     transition:all.4s;
 }
 .j-forms input[type="text"]:hover,
+.j-forms input[type="number"]:hover,
 .j-forms input[type="password"]:hover,
 .j-forms input[type="email"]:hover,
 .j-forms input[type="search"]:hover,
@@ -658,6 +660,7 @@
 .j-forms select:hover { border:2px solid #3676C8; }
 
 .j-forms input[type="text"]:focus,
+.j-forms input[type="number"]:focus,
 .j-forms input[type="password"]:focus,
 .j-forms input[type="email"]:focus,
 .j-forms input[type="search"]:focus,

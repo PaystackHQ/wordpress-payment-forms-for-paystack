@@ -66,6 +66,12 @@ class Form_Shortcode {
 	public $plan = false;
 
 	/**
+	 * The variable to hold the stock value.
+	 * @var int
+	 */
+	public $stock = 0;
+
+	/**
 	 * Holds the array of payment options available.
 	 *
 	 * @var array
@@ -136,45 +142,51 @@ class Form_Shortcode {
 				$show_form = $this->should_show_form();
 	
 				if ( $show_form ) {
-					// Form title
-					if ( $this->meta['hidetitle'] != 1 ) {
-						$html[] = "<h1 id='pf-form" . esc_attr( $id ) . "'>" . esc_html( $obj->post_title ) . "</h1>";
+
+					if ( 'yes' === $this->meta['useinventory'] && 0 >= $this->stock ) {
+						$html[] = '<h1>' . esc_html__( 'Out of Stock', 'pff-paystack' ) . '</h1>';
+					} else {
+						// Form title
+						if ( $this->meta['hidetitle'] != 1 ) {
+							$html[] = "<h1 id='pf-form" . esc_attr( $id ) . "'>" . esc_html( $obj->post_title ) . "</h1>";
+						}
+		
+						// Start form output
+						$html[] = '<form version="' . esc_attr( PFF_PAYSTACK_VERSION ) . '" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" method="post" class="paystack-form j-forms" novalidate>
+							<div class="j-row">';
+		
+						// Hidden Fields
+						$html[] = $this->get_hidden_fields();
+						// User fields
+						$html[] = $this->get_fullname_field();
+						$html[] = $this->get_email_field();
+
+						// Amount selection with consideration for variable amounts, minimum payments, and recurring plans
+						$html[] = $this->get_amount_field();
+
+						$html[] = $this->get_quantity_field();
+		
+						// Recurring payment options
+						$html[] = $this->get_recurring_field();
+						$html[] = $this->get_recurring_plan_fields();
+						
+						$html[] = do_shortcode( $obj->post_content );
+
+						$html[] = $this->get_agreement_field();
+
+						$html[] = $this->get_form_footer();
+		
+						$html[] = '</div></form>';
 					}
-	
-					// Start form output
-					$html[] = '<form version="' . esc_attr( PFF_PAYSTACK_VERSION ) . '" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" method="post" class="paystack-form j-forms" novalidate>
-						  <div class="j-row">';
-	
-					// Hidden Fields
-					$html[] = $this->get_hidden_fields();
-					// User fields
-					$html[] = $this->get_fullname_field();
-					$html[] = $this->get_email_field();
 
-					// Amount selection with consideration for variable amounts, minimum payments, and recurring plans
-					$html[] = $this->get_amount_field();
-
-					$html[] = $this->get_quantity_field();
-	
-					// Recurring payment options
-					$html[] = $this->get_recurring_field();
-					$html[] = $this->get_recurring_plan_fields();
-					
-					$html[] = do_shortcode( $obj->post_content );
-
-					$html[] = $this->get_agreement_field();
-
-					$html[] = $this->get_form_footer();
-	
-					$html[] = '</div></form>';
 				} else {
-					$html[] = '<h5>' . __( 'You must be logged in to make a payment.', 'pff-paystack' ) . '</h5>';
+					$html[] = '<h5>' . esc_html__( 'You must be logged in to make a payment.', 'pff-paystack' ) . '</h5>';
 				}
 			} else {
-				$html[] = '<h5>' . __( 'Invalid Paystack form ID or the form does not exist.', 'pff-paystack' ) . '</h5>';
+				$html[] = '<h5>' . esc_html__( 'Invalid Paystack form ID or the form does not exist.', 'pff-paystack' ) . '</h5>';
 			}
 		} else {
-			$html[] = '<h5>' . __( 'No Paystack form ID provided.', 'pff-paystack' ) . '</h5>';
+			$html[] = '<h5>' . esc_html__( 'No Paystack form ID provided.', 'pff-paystack' ) . '</h5>';
 		}
 
 		$html = implode( '', $html );
@@ -230,7 +242,7 @@ class Form_Shortcode {
 			$this->meta['paymentoptions'] = array_map( 'sanitize_text_field', $this->meta['paymentoptions'] );
 		}
 
-		$this->meta['planerrorcode'] = __( 'Input Correct Recurring Plan Code', 'pff-paystack' );
+		$this->meta['planerrorcode'] = esc_html__( 'Input Correct Recurring Plan Code', 'pff-paystack' );
 
 		if ( 'plan' === $this->meta['recur'] ) {
 			if ( '' === $this->meta['recurplan'] ) {
@@ -245,6 +257,18 @@ class Form_Shortcode {
 				}
 			}
 		}
+
+		if ( '' == $this->meta['inventory'] ) {
+			$this->meta['inventory'] = 1;
+		}
+		if ( '' == $this->meta['sold'] ) {
+			$this->meta['sold'] = 0;
+		}
+		if ( '' == $this->meta['useinventory'] ) {
+			$this->meta['useinventory'] = "no";
+		}
+
+		$this->stock = $this->meta['inventory'] - $this->meta['sold'];
 	}
 
 	/**
@@ -283,9 +307,9 @@ class Form_Shortcode {
 	 */
 	public function get_fullname_field() {
 		$html = '<div class="span12 unit">
-			<label class="label">' . __( 'Full Name', 'pff-paystack' ) . ' <span>*</span></label>
+			<label class="label">' . esc_html__( 'Full Name', 'pff-paystack' ) . ' <span>*</span></label>
 			<div class="input">
-				<input type="text" name="pf-fname" placeholder="' . __( 'First & Last Name', 'pff-paystack' ) . '" value="' . esc_attr( $this->user['fullname'] ) . '" required>
+				<input type="text" name="pf-fname" placeholder="' . esc_html__( 'First & Last Name', 'pff-paystack' ) . '" value="' . esc_attr( $this->user['fullname'] ) . '" required>
 			</div>
 		</div>';
 		return $html;
@@ -298,9 +322,9 @@ class Form_Shortcode {
 	 */
 	public function get_email_field() {
 		$html = '<div class="span12 unit">
-			<label class="label">' . __( 'Email', 'pff-paystack' ) . ' <span>*</span></label>
+			<label class="label">' . esc_html__( 'Email', 'pff-paystack' ) . ' <span>*</span></label>
 			<div class="input">
-				<input type="email" name="pf-pemail" placeholder="' . __( 'Enter Email Address', 'pff-paystack' ) . '" id="pf-email" value="' . esc_attr( $this->user['email'] ) . '" ' . ( $this->meta['loggedin'] == 'yes' ? 'readonly' : '' ) . ' required>
+				<input type="email" name="pf-pemail" placeholder="' . esc_html__( 'Enter Email Address', 'pff-paystack' ) . '" id="pf-email" value="' . esc_attr( $this->user['email'] ) . '" ' . ( $this->meta['loggedin'] == 'yes' ? 'readonly' : '' ) . ' required>
 			</div>
 		</div>';
 		return $html;
@@ -324,29 +348,30 @@ class Form_Shortcode {
 
 			// If the amount is set.
 			if ( 0 === $this->meta['usevariableamount'] ) {
-
+				$min_text = '';
 				if ($this->meta['minimum'] == 1) {
 					$html[] = '<small> Minimum payable amount <b style="font-size:87% !important;">' . esc_html($this->meta['currency']) . '  ' . esc_html(number_format($this->meta['amount'])) . '</b></small>';
+					$min_text = 'min="'. $this->meta['amount'] .'"';
 				}
 
 				if ($this->meta['recur'] == 'plan') {
 					if ( $this->show_btn ) {
-						$html[] = '<input type="text" name="pf-amount" value="' . esc_attr( $this->meta['planamount'] ) . '" id="pf-amount" readonly required />';
+						$html[] = '<input type="number" name="pf-amount" value="' . esc_attr( $this->meta['planamount'] ) . '" id="pf-amount" readonly required />';
 					} else {
 						$html[] = '<div class="span12 unit">
 									<label class="label" style="font-size:18px;font-weight:600;line-height: 20px;">' . esc_html( $this->meta['planerrorcode'] ) . '</label>
 									</div>';
 					}
 				} elseif ( $this->meta['recur'] == 'optional' ) {
-					$html[] = '<input type="text" name="pf-amount" class="pf-number" id="pf-amount" value="0" required />';
+					$html[] = '<input type="number" name="pf-amount" class="pf-number" id="pf-amount" value="0" required />';
 				} else {
-					$html[] = '<input type="text" name="pf-amount" class="pf-number" value="' . esc_attr( 0 === $this->meta['amount'] ? "0" : $this->meta['amount'] ) . '" id="pf-amount" ' . ( 0 !== $this->meta['amount'] && 1 !== $this->meta['minimum'] ? 'readonly' : '' ) . ' required />';
+					$html[] = '<input type="number" name="pf-amount" class="pf-number" value="' . esc_attr( 0 === $this->meta['amount'] ? "0" : $this->meta['amount'] ) . '" ' . $min_text . ' id="pf-amount" required />';
 				}
 
 			} else {
 
 				if ( '' === $this->meta['variableamount'] || 0 === $this->meta['variableamount'] || ! is_array( $this->meta['paymentoptions'] ) ) {
-					$html[] = __( 'Form Error, set variable amount string', 'pff-paystack' );
+					$html[] = esc_html__( 'Form Error, set variable amount string', 'pff-paystack' );
 				} else if ( count( $this->meta['paymentoptions'] ) > 0 ) {
 					$html[] = '<div class="select">
 							<input type="hidden"  id="pf-vname" name="pf-vname" />
@@ -417,15 +442,23 @@ class Form_Shortcode {
 	public function get_quantity_field() {
 		$html = [];
 		// Quantity selection
-		if ( 'no' === $this->meta['recur'] && 'yes' === $this->meta['usequantity'] && ( 1 === $this->meta['usevariableamount'] || 0 !== $this->meta['amount'] ) ) {
+		if ( 'no' === $this->meta['recur'] && 'yes' === $this->meta['usequantity'] ) {
 			$html[] = '<div class="span12 unit">
-				<label class="label">Quantity</label>
+				<label class="label">' . $this->meta['quantityunit'] . '</label>
 				<div class="select">
 					<input type="hidden" value="' . esc_attr( $this->meta['amount'] ) . '" id="pf-qamount"/>
 					<select class="form-control" id="pf-quantity" name="pf-quantity">';
-				for ( $i = 1; $i <= $this->meta['quantity']; $i++ ) {
+
+				$max = $this->meta['quantity'] + 1;
+			
+				if ( $max > ( $this->stock + 1 ) && $this->meta['useinventory'] == 'yes' ) {
+					$max = $this->stock + 1;
+				}
+
+				for ( $i = 1; $i < $max; $i++ ) {
 					$html[] = '<option value="' . esc_attr( $i ) . '">' . esc_html( $i ) . '</option>';
 				}
+
 			$html[] = '</select> <i></i> </div></div>';
 		}
 		return implode( '', $html );
@@ -505,18 +538,18 @@ class Form_Shortcode {
 			
 
 			$html[] = '<div class="divider-text gap-top-20 gap-bottom-45">
-							<span>' . __( 'Payment Invoice', 'pff-paystack' ) . '</span>
+							<span>' . esc_html__( 'Payment Invoice', 'pff-paystack' ) . '</span>
 						</div>';
 			
 			$html[] = '<div class="j-row">';
 
 			$html[] = '<div class="span12 unit">
-							<label class="label inline">' . __( 'Email:', 'pff-paystack' ) . '</label>
+							<label class="label inline">' . esc_html__( 'Email:', 'pff-paystack' ) . '</label>
 							<strong><a href="mailto:' . esc_attr( $record->email ) . '">' . esc_html( $record->email ) . '</a></strong>
 						</div>';
 
 			$html[] = '<div class="span12 unit">
-							<label class="label inline">' . __( 'Amount:', 'pff-paystack' ) . '</label>
+							<label class="label inline">' . esc_html__( 'Amount:', 'pff-paystack' ) . '</label>
 							<strong>' . esc_html( $this->meta['currency'] . number_format( $record->amount ) ) . '</strong>
 						</div>';
 
@@ -524,14 +557,14 @@ class Form_Shortcode {
 			$html[] = $this->helpers->format_meta_as_display_fields( $record->metadata );
 			
 			$html[] = '<div class="span12 unit">
-							<label class="label inline">' . __( 'Date:', 'pff-paystack' ) . '</label>
+							<label class="label inline">' . esc_html__( 'Date:', 'pff-paystack' ) . '</label>
 							<strong>' . esc_html( $record->created_at ) . '</strong>
 						</div>';
 
 			if ( 1 === intval( $record->paid ) ) {
 				$html[] = '<div class="span12 unit">
-								<label class="label inline">' . __( 'Payment Status:', 'pff-paystack' ) . '</label>
-								<strong>' . __( 'Successful', 'pff-paystack' ) . '</strong>
+								<label class="label inline">' . esc_html__( 'Payment Status:', 'pff-paystack' ) . '</label>
+								<strong>' . esc_html__( 'Successful', 'pff-paystack' ) . '</strong>
 							</div>';
 			}
 		
@@ -539,10 +572,10 @@ class Form_Shortcode {
 			$html[] = '</div>';
 		
 			$html[] = '<div class="footer">';
-			$html[] = '<small><span style="color: red;">*</span> ' . __( 'are compulsory', 'pff-paystack' ) . '</small><br>';
+			$html[] = '<small><span style="color: red;">*</span> ' . esc_html__( 'are compulsory', 'pff-paystack' ) . '</small><br>';
 			$html[] = '<img class="paystack-cardlogos size-full wp-image-1096" alt="cardlogos" src="' . esc_url( PFF_PAYSTACK_PLUGIN_URL . '/assets/images/logos@2x.png' ) . '">';
 			if ( 0 === intval( $record->paid ) ) {
-				$html[] = '<button type="submit" class="primary-btn" id="submitbtn">' . __( 'Retry Payment', 'pff-paystack' ) . '</button>';
+				$html[] = '<button type="submit" class="primary-btn" id="submitbtn">' . esc_html__( 'Retry Payment', 'pff-paystack' ) . '</button>';
 			}
 		
 			$html[] = ' </div>';
@@ -558,6 +591,4 @@ class Form_Shortcode {
 
 		return $html;
 	}
-
-
 }

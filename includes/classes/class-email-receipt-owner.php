@@ -31,10 +31,17 @@ class Email_Receipt_Owner extends Email {
 	public $sitemessage = '';
 
 	/**
+	 * The email address for the body.
+	 *
+	 * @var string
+	 */
+	public $html_email = '';
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
-		add_action( 'pff_paystack_send_receipt', [ $this, 'send_receipt_owner' ], 11, 7 );
+		add_action( 'pff_paystack_send_receipt_owner', [ $this, 'send_receipt_owner' ], 11, 7 );
 	}
 
 	function send_receipt_owner( $form_id, $currency, $amount, $name, $email, $code, $metadata ) {
@@ -45,16 +52,17 @@ class Email_Receipt_Owner extends Email {
 		$this->currency   = $currency;
 		$this->code       = $code;
 		$this->name       = $name;
-		$this->email      = stripslashes( $email );
+		$this->html_email = stripslashes( $email );
 		$this->metadata   = $metadata;
 
 		// Custom Values
-		$this->subject     = __( 'You just received a payment' , 'pff-paystack' );
+		$this->subject     = esc_html__( 'You just received a payment' , 'pff-paystack' );
 		$this->heading     = get_post_meta( $form_id, '_heading', true );
 		$this->sitemessage = get_post_meta( $form_id, '_message', true );
 
 		$this->reply_to   = get_option( 'admin_email' );
 		$this->reply_name = get_option( 'blogname' );
+		$this->email      = stripslashes( $this->reply_to );
 		$this->send();
 	}
 
@@ -121,7 +129,7 @@ class Email_Receipt_Owner extends Email {
 															</table>
 															<p style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;margin-top:8px;margin-bottom:16px">
 																<?php esc_html_e( 'Amount', 'pff-paystack' ); ?> <strong>: <?php echo esc_html( $this->currency ) . ' ' . number_format( $this->amount ); ?></strong><br>
-																<?php esc_html_e( 'Email', 'pff-paystack' ); ?> <strong>: <?php echo esc_html( $this->email ); ?></strong><br>
+																<?php esc_html_e( 'Email', 'pff-paystack' ); ?> <strong>: <?php echo esc_html( $this->html_email ); ?></strong><br>
 																<?php
 																	$new = json_decode( $this->metadata );
 																	if ( array_key_exists( "0", $new ) ) {

@@ -60,7 +60,7 @@ class Email_Invoice extends Email {
 
 		$this->subject = sprintf(
 			// Translators: %1$s is the currency code, %2$s is the formatted amount
-			__( 'Payment Invoice for %1$s %2$s', 'text-domain' ),
+			esc_html__( 'Payment Invoice for %1$s %2$s', 'text-domain' ),
 			$currency,
 			number_format( $amount )
 		);

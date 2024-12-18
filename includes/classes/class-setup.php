@@ -35,25 +35,25 @@ class Setup {
      */
     public function register_post_type() {
         $labels = [
-            'name'                  => __( 'Paystack Forms', 'paystack_form' ),
-            'singular_name'         => __( 'Paystack Form', 'paystack_form' ),
-            'add_new'               => __( 'Add New', 'paystack_form' ),
-            'add_new_item'          => __( 'Add Paystack Form', 'paystack_form' ),
-            'edit_item'             => __( 'Edit Paystack Form', 'paystack_form' ),
-            'new_item'              => __( 'Paystack Form', 'paystack_form' ),
-            'view_item'             => __( 'View Paystack Form', 'paystack_form' ),
-            'all_items'             => __( 'All Forms', 'paystack_form' ),
-            'search_items'          => __( 'Search Paystack Forms', 'paystack_form' ),
-            'not_found'             => __( 'No Paystack Forms found', 'paystack_form' ),
-            'not_found_in_trash'    => __( 'No Paystack Forms found in Trash', 'paystack_form' ),
-            'parent_item_colon'     => __( 'Parent Paystack Form:', 'paystack_form' ),
-            'menu_name'             => __( 'Paystack Forms', 'paystack_form' ),
+            'name'                  => esc_html__( 'Paystack Forms', 'paystack_form' ),
+            'singular_name'         => esc_html__( 'Paystack Form', 'paystack_form' ),
+            'add_new'               => esc_html__( 'Add New', 'paystack_form' ),
+            'add_new_item'          => esc_html__( 'Add Paystack Form', 'paystack_form' ),
+            'edit_item'             => esc_html__( 'Edit Paystack Form', 'paystack_form' ),
+            'new_item'              => esc_html__( 'Paystack Form', 'paystack_form' ),
+            'view_item'             => esc_html__( 'View Paystack Form', 'paystack_form' ),
+            'all_items'             => esc_html__( 'All Forms', 'paystack_form' ),
+            'search_items'          => esc_html__( 'Search Paystack Forms', 'paystack_form' ),
+            'not_found'             => esc_html__( 'No Paystack Forms found', 'paystack_form' ),
+            'not_found_in_trash'    => esc_html__( 'No Paystack Forms found in Trash', 'paystack_form' ),
+            'parent_item_colon'     => esc_html__( 'Parent Paystack Form:', 'paystack_form' ),
+            'menu_name'             => esc_html__( 'Paystack Forms', 'paystack_form' ),
 		];
 
         $args = [
             'labels'                => $labels,
             'hierarchical'          => true,
-            'description'           => __( 'Paystack Forms filterable by genre', 'paystack_form' ),
+            'description'           => esc_html__( 'Paystack Forms filterable by genre', 'paystack_form' ),
             'supports'              => array( 'title', 'editor' ),
             'public'                => true,
             'show_ui'               => true,
@@ -86,7 +86,7 @@ class Setup {
 	 */
 	public function add_action_links( $links ) {
 		$settings_link = array(
-			'<a href="' . admin_url( 'edit.php?post_type=paystack_form&page=settings') . '">' . __( 'Settings', 'pff-paystack' ) . '</a>',
+			'<a href="' . admin_url( 'edit.php?post_type=paystack_form&page=settings') . '">' . esc_html__( 'Settings', 'pff-paystack' ) . '</a>',
 		);
 		return array_merge( $settings_link, $links );
 	}

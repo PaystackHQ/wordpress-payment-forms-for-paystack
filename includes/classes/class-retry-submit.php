@@ -91,7 +91,7 @@ class Retry_Submit {
 		if ( ! isset( $_POST['pf-nonce'] ) || false === wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['pf-nonce'] ) ), 'pff-paystack-retry' ) ) {
 			$response = array(
 				'result'  => 'failed',
-				'message' => __( 'Nonce verification is required.', 'pff-paystack' ),
+				'message' => esc_html__( 'Nonce verification is required.', 'pff-paystack' ),
 			);
 			// Exit here, for not processing further because of the error.
 			exit( wp_json_encode( $response ) );	
@@ -104,7 +104,7 @@ class Retry_Submit {
 		} else {
 			$response = array(
 				'result'  => 'failed',
-				'message' => __( 'Code is required', 'pff-paystack' ),
+				'message' => esc_html__( 'Code is required', 'pff-paystack' ),
 			);
 			// Exit here, for not processing further because of the error.
 			exit( wp_json_encode( $response ) );
@@ -193,16 +193,35 @@ class Retry_Submit {
 	protected function update_retry_code() {
 		global $wpdb;
 		$return = false;
-		$table  = $wpdb->prefix . PFF_PAYSTACK_TABLE;
+		$table  = esc_sql( $wpdb->prefix . PFF_PAYSTACK_TABLE );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$return = $wpdb->query(
-			$wpdb->prepare(
-				"UPDATE %i SET txn_code_2 = %s WHERE txn_code = %s",
-				$table,
-				$this->new_code,
-				$this->code
-			)
-		);
+
+		$current_version = get_bloginfo('version');
+		if ( version_compare( '6.2', $current_version, '<=' ) ) {
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$return = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET txn_code_2 = %s WHERE txn_code = %s",
+					$table,
+					$this->new_code,
+					$this->code
+				)
+			);
+			// phpcs:enable -- Stop ignoring
+		} else {
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$return = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE `%s` SET txn_code_2 = '%s' WHERE txn_code = '%s'",
+					$table,
+					$this->new_code,
+					$this->code
+				)
+			);
+			// phpcs:enable -- Stop ignoring
+		}
+
+
 		return $return;
 	}
 }

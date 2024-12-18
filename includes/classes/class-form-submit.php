@@ -97,13 +97,13 @@ class Form_Submit {
 		
 		if ( ! isset( $_POST['pf-nonce'] ) || false === wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['pf-nonce'] ) ), 'pff-paystack-invoice' ) ) {
 			$this->response['result']  = 'failed';
-			$this->response['message'] = __( 'Nonce verification is required.', 'pff-paystack' );
+			$this->response['message'] = esc_html__( 'Nonce verification is required.', 'pff-paystack' );
 			return false;			
 		}
 
 		if ( ! isset( $_POST['pf-id'] ) || '' == trim( sanitize_text_field( wp_unslash( $_POST['pf-id'] ) ) ) ) {
 			$this->response['result']  = 'failed';
-			$this->response['message'] = __( 'A form ID is required', 'pff-paystack' );
+			$this->response['message'] = esc_html__( 'A form ID is required', 'pff-paystack' );
 			return false;
 		} else {
 			$this->form_id = sanitize_text_field( wp_unslash( $_POST['pf-id'] ) );
@@ -111,7 +111,7 @@ class Form_Submit {
 
 		if ( ! isset( $_POST['pf-pemail'] ) || '' == trim( sanitize_text_field( wp_unslash( $_POST['pf-pemail'] ) ) ) ) {
 			$this->response['result']  = 'failed';
-			$this->response['message'] = __( 'Email is required', 'pff-paystack' );
+			$this->response['message'] = esc_html__( 'Email is required', 'pff-paystack' );
 			return false;
 		}
 		return true;
@@ -126,6 +126,8 @@ class Form_Submit {
 		$this->helpers   = new Helpers();
 		$this->meta      = $this->helpers->parse_meta_values( get_post( $this->form_id ) );
 		$this->form_data = filter_input_array( INPUT_POST );
+
+		$this->sanitize_form_data();
 
 		$this->metadata = $this->form_data;
 		unset(
@@ -151,13 +153,40 @@ class Form_Submit {
 	}
 
 	/**
+	 * Iterates through the $form_data and sanitizes it.
+	 *
+	 * @return void
+	 */
+	public function sanitize_form_data() {
+		foreach ( $this->form_data as $key => $value ) {
+			switch ( $key ) {
+				case 'pf-amount':
+				case 'pf-vamount':
+				case 'pf-quantity':
+				case 'pf-id':
+				case 'pf-user_id':
+					$this->form_data[ $key ] = sanitize_text_field( $value );
+				break;
+
+				case 'pf-pemail':
+					$this->form_data[ $key ] = sanitize_email( $value );
+				break;
+				
+
+				default:
+					$this->form_data[ $key ] = sanitize_text_field( $value );
+			}
+		}
+	}
+
+	/**
 	 * This will adjust the amount being paid according to the variable payment and amounts.
 	 *
 	 * @param integer $amount
 	 * @return integer
 	 */
 	public function process_amount( $amount = 0 ) {
-		$original_amount  = $amount;
+		$original_amount = $amount;
 
 		if ( 'no' === $this->meta['recur'] && 1 !== $this->meta['usevariableamount'] ) {
 			if ( 0 !== (int) floatval( $this->meta['amount'] ) ) {
@@ -168,12 +197,8 @@ class Form_Submit {
 			$amount = (int) str_replace( ' ', '', floatval( $amount ) );
 		}
 
-		if ( 1 === $this->meta['minimum'] && 0 !== floatval( $this->meta['amount'] ) ) {
-			if ( $original_amount < floatval( $this->meta['amount'] ) ) {
-				$amount = floatval( $this->meta['amount'] );
-			} else {
-				$amount = $original_amount;
-			}
+		if ( 1 === $this->meta['minimum'] && 0 !== floatval( $this->form_data['pf-amount'] ) ) {
+			$amount = floatval( $this->form_data['pf-amount'] );
 		}
 
 		if ( 1 === $this->meta['usevariableamount'] ) {
@@ -198,10 +223,10 @@ class Form_Submit {
 	 * @return integer
 	 */
 	public function process_amount_quantity( $amount = 0 ) {
-		if ( $this->meta['use_quantity'] === 'yes' && ! ( 'optional' === $this->meta['recur'] || 'plan' === $this->meta['recur'] ) ) {
+		if ( $this->meta['usequantity'] === 'yes' && ! ( 'optional' === $this->meta['recur'] || 'plan' === $this->meta['recur'] ) ) {
 			$quantity   = $this->form_data['pf-quantity'];
 			$unit_amt   = (int) str_replace( ' ', '', $amount );
-			$amount     = $quantity * $unit_amt;
+			$amount     = (int) $quantity * $unit_amt;
 		}
 		return $amount;
 	}
@@ -223,7 +248,7 @@ class Form_Submit {
 					if ( $value['size'] > $max_file_size ) {
 						$response['result']  = 'failed';
 						// translators: %s: maximum upload file size in MB
-						$response['message'] = sprintf( __( 'Max upload size is %sMB', 'pff-paystack' ), $this->meta['filelimit'] );
+						$response['message'] = sprintf( esc_html__( 'Max upload size is %sMB', 'pff-paystack' ), $this->meta['filelimit'] );
 						exit( wp_json_encode( $response ) );
 					} else {
 						$attachment_id  = media_handle_upload( $key_name, $this->form_id );
@@ -240,7 +265,7 @@ class Form_Submit {
 						'display_name'  => ucwords( str_replace( '_', ' ', $key_name ) ),
 						'variable_name' => $key_name,
 						'type'          => 'text',
-						'value'         => __( 'No file Uploaded', 'pff-paystack' ),
+						'value'         => esc_html__( 'No file Uploaded', 'pff-paystack' ),
 					);
 				}
 			}
@@ -272,16 +297,17 @@ class Form_Submit {
 
 		global $wpdb;
 		$code            = $this->generate_code();
-		$table           = $wpdb->prefix . PFF_PAYSTACK_TABLE;
+		$table           = esc_sql( $wpdb->prefix . PFF_PAYSTACK_TABLE );
 		
 		$this->fixed_metadata = [];
 	
 		$amount = (int) str_replace( ' ', '', $this->form_data['pf-amount'] );
 		$amount = $this->process_amount( $amount );
+		$amount = $this->process_amount_quantity( $amount );
 
 		// Store the single unit price.
 		$this->fixed_metadata[] = array(
-			'display_name'  => __( 'Unit Price', 'pff-paystack' ),
+			'display_name'  => esc_html__( 'Unit Price', 'pff-paystack' ),
 			'variable_name' => 'Unit_Price',
 			'type'          => 'text',
 			'value'         => $this->meta['currency'] . number_format( $amount ),
@@ -310,29 +336,58 @@ class Form_Submit {
 			'metadata' => wp_json_encode( $this->fixed_metadata ),
 		);
 		
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$exist = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * 
-					FROM %i
-					WHERE post_id = %s 
-					AND email = %s 
-					AND user_id = %s 
-					AND amount = %s 
-					AND plan = %s 
-					AND ip = %s 
-					AND paid = '0' 
-					AND metadata = %s",
-				$table,
-				$insert['post_id'], 
-				$insert['email'],
-				$insert['user_id'],
-				$insert['amount'],
-				$insert['plan'],
-				$insert['ip'],
-				$insert['metadata']
-			)
-		);
+
+		$current_version = get_bloginfo('version');
+		if ( version_compare( '6.2', $current_version, '<=' ) ) {
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$exist = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * 
+					 FROM $table
+					 WHERE post_id = %d 
+					 AND email = %s 
+					 AND user_id = %d 
+					 AND amount = %f 
+					 AND plan = %s 
+					 AND ip = %s 
+					 AND paid = '0' 
+					 AND metadata = %s",
+					$insert['post_id'], 
+					$insert['email'],
+					$insert['user_id'],
+					$insert['amount'],
+					$insert['plan'],
+					$insert['ip'],
+					$insert['metadata']
+				)
+			);
+			// phpcs:enable -- Stop ignoring
+		} else {
+			// phpcs:disable WordPress.DB -- Start ignoring
+			$exist = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * 
+					 FROM `$table`
+					 WHERE post_id = '%d' 
+					 AND email = '%s' 
+					 AND user_id = '%d' 
+					 AND amount = '%f'
+					 AND plan = '%s' 
+					 AND ip = '%s' 
+					 AND paid = '0' 
+					 AND metadata = '%s'",
+					$insert['post_id'], 
+					$insert['email'],
+					$insert['user_id'],
+					$insert['amount'],
+					$insert['plan'],
+					$insert['ip'],
+					$insert['metadata']
+				)
+			);
+			// phpcs:enable -- Stop ignoring
+		}
+
 
 		if ( count( $exist ) > 0 ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -366,10 +421,14 @@ class Form_Submit {
 		$transaction_charge = (int) $this->meta['merchantamount'];
         $transaction_charge = $transaction_charge * 100;
 
+		$txn_bearer = $this->meta['txnbearer'];
+
 		if ( '' == $this->meta['subaccount'] || ! isset( $this->meta['subaccount'] ) ) {
 			$subaccount         = null;
 			$txn_bearer         = null;
 			$transaction_charge = null;
+		} else {
+			$subaccount = $this->meta['subaccount'];
 		}
 		if ( '' == $transaction_charge || 0 == $transaction_charge || null == $transaction_charge ) {
 			$transaction_charge = null;
@@ -448,7 +507,7 @@ class Form_Submit {
 		if ( 'none' !== $plan_code ) {
 			$this->meta['plancode'] = $plan_code;
 			$this->fixed_metadata[] = array(
-				'display_name'  => __( 'Plan', 'pff-paystack' ),
+				'display_name'  => esc_html__( 'Plan', 'pff-paystack' ),
 				'variable_name' => 'Plan',
 				'type'          => 'text',
 				'value'         => $plan_code,
@@ -456,7 +515,7 @@ class Form_Submit {
 
 			if ( false !== $has_interval ) {
 				$this->fixed_metadata[] = array(
-					'display_name'  => __( 'Plan Interval', 'pff-paystack' ),
+					'display_name'  => esc_html__( 'Plan Interval', 'pff-paystack' ),
 					'variable_name' => 'Plan Interval',
 					'type'          => 'text',
 					'value'         => $has_interval,

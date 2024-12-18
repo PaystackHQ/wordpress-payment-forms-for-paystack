@@ -125,7 +125,8 @@ final class Payment_Forms {
 		foreach ( $this->classes as $key => $name ) {
 			include_once PFF_PAYSTACK_PLUGIN_PATH . '/includes/classes/class-' . $key . '.php';
 			if ( '' !== $name ) {
-				$this->classes[ $key ] = new ( $this->namespace . $name );
+				$className = $this->namespace . $name;
+				$this->classes[$key] = new $className();
 			}
 		}
 	}

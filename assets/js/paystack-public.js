@@ -640,12 +640,14 @@ function PffPaystackFee()
 			
 			function calculateTotal() {
 				var unit;
+
 				if ($("#pf-vamount").length) {
 					unit = $("#pf-vamount").val();
 				} else {
 					unit = $("#pf-amount").val();
 				}
 				var quant = $("#pf-quantity").val();
+
 				var newvalue = unit * quant;
 			
 				if (quant == "" || quant == null) {

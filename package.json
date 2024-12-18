@@ -1,6 +1,6 @@
 {
   "name": "pff-paystack",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Paystack Payment forms for WordPress",
   "main": "gulpfile.js",
   "scripts": {

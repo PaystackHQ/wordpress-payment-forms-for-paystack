@@ -66,6 +66,8 @@ class Activation {
 	public static function maybe_upgrade( $table_name ) {
 		global $wpdb;
 
+		$table_name = esc_sql( $table_name );
+
 		// Get the current version number, defaults to 1.0
 		$version = get_option( 'kkd_db_version', '1.0' );
 
@@ -87,7 +89,7 @@ class Activation {
 				$wpdb->query(
 					$wpdb->prepare(
 						// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-						"ALTER TABLE %i ADD `plan` VARCHAR(255) NOT NULL AFTER `paid`;",
+						"ALTER TABLE `%s` ADD `plan` VARCHAR(255) NOT NULL AFTER `paid`;",
 						$table_name
 					)
 				);
@@ -109,7 +111,7 @@ class Activation {
 				$wpdb->query(
 					$wpdb->prepare(
 						// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-						"ALTER TABLE %i ADD `txn_code_2` VARCHAR(255) DEFAULT '' NULL AFTER `txn_code`;",
+						"ALTER TABLE `%s` ADD `txn_code_2` VARCHAR(255) DEFAULT '' NULL AFTER `txn_code`;",
 						$table_name
 					)
 				);
@@ -131,7 +133,7 @@ class Activation {
 				$wpdb->query(
 					$wpdb->prepare(
 						// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-						"ALTER TABLE %i ADD `paid_at` timestamp  AFTER `created_at`;",
+						"ALTER TABLE `%s` ADD `paid_at` timestamp  AFTER `created_at`;",
 						$table_name
 					)
 				);

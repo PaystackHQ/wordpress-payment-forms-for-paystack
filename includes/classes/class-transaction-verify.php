@@ -51,19 +51,19 @@ class Transaction_Verify extends API {
 		$return = $response;
 		if ( false === $response ) {
 			$return = [
-				'message' => __( 'Payment Verification Failed', 'pff-paystack' ),
+				'message' => esc_html__( 'Payment Verification Failed', 'pff-paystack' ),
 				'result'  => 'failed',
 			];
 		} else {
 			if ( 'success' === $response->data->status ) {
 				$return = [
-					'message' => __( 'Payment Verification Passed', 'pff-paystack' ),
+					'message' => esc_html__( 'Payment Verification Passed', 'pff-paystack' ),
 					'result'  => 'success',
 					'data'    => wp_json_encode( $response->data ),
 				];
 			} else {
 				$return = [
-					'message' => __( 'Transaction Failed/Invalid Code', 'pff-paystack' ),
+					'message' => esc_html__( 'Transaction Failed/Invalid Code', 'pff-paystack' ),
 					'result'  => 'failed',
 				];
 			}

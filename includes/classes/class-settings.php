@@ -30,49 +30,49 @@ class Settings {
 		$this->fields = array(
 			'general' => array(
 				'mode' => array(
-					'title'   => __( 'Mode', 'pff-paystack' ),
+					'title'   => esc_html__( 'Mode', 'pff-paystack' ),
 					'type'    => 'select',
 					'default' => 'test',
 				),
 				'tsk' => array(
-					'title'   => __( 'Test Secret Key', 'pff-paystack' ),
+					'title'   => esc_html__( 'Test Secret Key', 'pff-paystack' ),
 					'type'    => 'password',
 					'default' => '',
 				),
 				'tpk' => array(
-					'title'   => __( 'Test Public Key', 'pff-paystack' ),
+					'title'   => esc_html__( 'Test Public Key', 'pff-paystack' ),
 					'type'    => 'text',
 					'default' => '',
 				),
 				'lsk' => array(
-					'title'   => __( 'Live Secret Key', 'pff-paystack' ),
+					'title'   => esc_html__( 'Live Secret Key', 'pff-paystack' ),
 					'type'    => 'password',
 					'default' => '',
 				),
 				'lpk' => array(
-					'title'   => __( 'Live Public Key', 'pff-paystack' ),
+					'title'   => esc_html__( 'Live Public Key', 'pff-paystack' ),
 					'type'    => 'text',
 					'default' => '',
 				),
 			),
 			'fees' => array(
 				'prc' => array(	
-					'title'   => __( 'Percentage', 'pff-paystack' ),
+					'title'   => esc_html__( 'Percentage', 'pff-paystack' ),
 					'type'    => 'text',
 					'default' => 1.5,
 				),
 				'ths' => array(	
-					'title'   => __( 'Threshold <br> <small>(amount above which Paystack adds the fixed amount below)</small>', 'pff-paystack' ),
+					'title'   => wp_kses_post( __( 'Threshold <br> <small>(amount above which Paystack adds the fixed amount below)</small>', 'pff-paystack' ) ),
 					'type'    => 'text',
 					'default' => 2500,
 				),
 				'adc' => array(	
-					'title'   => __( 'Additional Charge <br> <small> (amount added to percentage fee when transaction amount is above threshold) </small>', 'pff-paystack' ),
+					'title'   => wp_kses_post( __( 'Additional Charge <br> <small> (amount added to percentage fee when transaction amount is above threshold) </small>', 'pff-paystack' ) ),
 					'type'    => 'text',
 					'default' => 100,
 				),
 				'cap' => array(	
-					'title'   => __( 'Cap <br> <small> (maximum charge paystack can charge on your transactions)', 'pff-paystack' ),
+					'title'   => wp_kses_post( __( 'Cap <br> <small> (maximum charge paystack can charge on your transactions)', 'pff-paystack' ) ),
 					'type'    => 'text',
 					'default' => 2000,
 				),
@@ -88,7 +88,7 @@ class Settings {
 	 * @return void
 	 */
 	public function register_settings_page() {
-		add_submenu_page( 'edit.php?post_type=paystack_form', __( 'Settings', 'pff-paystack' ), __( 'Settings', 'pff-paystack' ), 'edit_posts', 'settings', [ $this, 'output_settings_page' ] );
+		add_submenu_page( 'edit.php?post_type=paystack_form', esc_html__( 'Settings', 'pff-paystack' ), esc_html__( 'Settings', 'pff-paystack' ), 'edit_posts', 'settings', [ $this, 'output_settings_page' ] );
 	}
 
 	/**
